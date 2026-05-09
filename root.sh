@@ -10,6 +10,9 @@ INITRD_INPUT=$INITRD_PATH
 INITRD_BACKUP=$INITRD_PATH.bak
 INITRD_OUTPUT=$INITRD_PATH
 INPLACE=1
+MAGISK_APK=$BASE_DIR/magisk.apk
+STAGE2_INJECT_BEGIN="# BST-AIR-ROOT:MAGISK_RC_INJECT_BEGIN"
+STAGE2_INJECT_END="# BST-AIR-ROOT:MAGISK_RC_INJECT_END"
 
 abspath() {
   if  [[ $1 == /* ]]; then
@@ -17,6 +20,21 @@ abspath() {
   else
     echo $(pwd)/$1
   fi
+}
+
+die() {
+  echo "[!] $*" >&2
+  exit 1
+}
+
+require_cmd() {
+  command -v "$1" >/dev/null 2>&1 || die "Missing required command: $1"
+}
+
+validate_initrd() {
+  [[ -f "$INITRD_INPUT" ]] || die "initrd not found: $INITRD_INPUT"
+  gzip -t "$INITRD_INPUT" >/dev/null 2>&1 || die "initrd is not a valid gzip file: $INITRD_INPUT"
+  gzip -dc "$INITRD_INPUT" | cpio -it 2>/dev/null | grep -qx "boot/stage2.sh" || die "initrd does not contain boot/stage2.sh"
 }
 
 while getopts "h?i:b:o:" opt; do
@@ -51,6 +69,29 @@ else
   fi
 fi
 
+require_cmd gzip
+require_cmd cpio
+require_cmd unzip
+require_cmd sed
+require_cmd dirname
+require_cmd mkdir
+require_cmd cp
+require_cmd chmod
+require_cmd cat
+require_cmd find
+require_cmd grep
+require_cmd awk
+
+if [ $INPLACE -eq 1 ]; then
+  require_cmd defaults
+  require_cmd pkill
+  require_cmd open
+fi
+
+[[ -f "$MAGISK_APK" ]] || die "Missing magisk.apk in project folder (expected: $MAGISK_APK)"
+
+validate_initrd
+
 echo '=================================================='
 echo '**                                              **'
 echo '**        BlueStacks Air Magisk Installer       **'
@@ -70,7 +111,8 @@ read -p "Continue? (y/n): " confirm && [[ $confirm == [yY] || $confirm == [yY][e
 
 echo '[*] Preparing magisk'
 [[ -d magisk ]] && rm -rf magisk
-unzip -oq magisk.apk -d magisk
+unzip -oq "$MAGISK_APK" -d magisk
+[[ -d magisk/lib/$ARCH ]] || die "Unsupported architecture in magisk.apk (expected libs under: magisk/lib/$ARCH)"
 
 [[ -d $MAGISK_BIN_DIR ]] && rm -rf $MAGISK_BIN_DIR
 mkdir "$MAGISK_BIN_DIR"
@@ -85,6 +127,7 @@ cp magisk/assets/stub.apk "$MAGISK_BIN_DIR/stub.apk"
 rm -rf magisk
 
 echo "[*] Backing up initrd to $INITRD_BACKUP"
+[[ "$INITRD_BACKUP" != "$INITRD_INPUT" ]] || die "Backup path equals input path: $INITRD_BACKUP"
 [[ ! -f "$INITRD_BACKUP" ]] && cp "$INITRD_INPUT" "$INITRD_BACKUP"
 
 [[ ! -d build ]] && mkdir build
@@ -102,15 +145,29 @@ if [ -f $MAGISK_BIN_DIR/magisk32 ]; then
   sed -i '' -e 's/magisk64/magisk32/g' boot/magisk.rc
 fi
 
-# Install magisk to system
-sed -i '' -e 's/exec \/init//' boot/stage2.sh
-cat << EOF >> boot/stage2.sh
+if grep -qF "$STAGE2_INJECT_BEGIN" boot/stage2.sh || grep -qF "cat /boot/magisk.rc >> /init.bst.rc" boot/stage2.sh; then
+  echo '[*] stage2.sh already patched (skipping injection)'
+else
+  echo '[*] Injecting magisk.rc into stage2.sh'
+  awk '
+    BEGIN { removed=0 }
+    $0 ~ /^[[:space:]]*exec[[:space:]]+\/init[[:space:]]*$/ {
+      if (!removed) { removed=1; next }
+    }
+    { print }
+    END { if (!removed) exit 2 }
+  ' boot/stage2.sh > boot/stage2.sh.tmp || die "Cannot locate 'exec /init' in boot/stage2.sh"
+  mv boot/stage2.sh.tmp boot/stage2.sh
+  cat << EOF >> boot/stage2.sh
+$STAGE2_INJECT_BEGIN
 log_echo "Installing magisk.rc"
 cat /boot/magisk.rc >> /init.bst.rc
 die_if_error "Cannot install magisk.rc"
 
 exec /init
+$STAGE2_INJECT_END
 EOF
+fi
 
 echo "[*] Repacking initrd to $INITRD_OUTPUT"
 find . | cpio -H newc -o | gzip > $INITRD_OUTPUT

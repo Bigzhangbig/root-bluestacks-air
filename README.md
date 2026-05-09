@@ -44,6 +44,7 @@
   ```
 
   the above command will backup the original `initrd_hvf.img` in `files/backup` and create a patched one in `files/initrd_hvf.img`, you may specify a different path for the output and backup directory
+- Re-running the script on an already patched image will update the injected Magisk files and skip patching `boot/stage2.sh` again
 - If your `initrd_hvf.img` is already in the project folder, you can specify it as input using `-i`
 
   ```bash
