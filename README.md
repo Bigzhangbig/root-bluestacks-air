@@ -30,7 +30,7 @@
 - ‼️ **REQUIRED** ‼️ Open BlueStacks Air for the first time
 - Close BlueStacks Air
 - Download this repo and extract it
-- Copy the downloaded Kitsune Mask apk to the project folder, and rename it to `magisk.apk`
+- Copy the downloaded Magisk app apk (official Magisk or Kitsune Mask) to the project folder, and rename it to `magisk.apk`
 - Open **Terminal.app** or **iTerm.app** and navigate to the project folder
 
   ```bash
@@ -70,12 +70,12 @@
 
 ### Next Steps
 
-- Install Kitsune Mask (`magisk.apk`)
-- Open Kitsune Mask and press **OK** when the **Requires Additional Setup** prompt appears. This will reboot BlueStacks Air.
+- Install Magisk app (`magisk.apk`)
+- Open Magisk and press **OK** when the **Requires Additional Setup** prompt appears. This will reboot BlueStacks Air.
   ![magisk-additional-setup](/images/magisk-additional-setup.png)
 - Force quit BlueStacks Air if necessary
 - Open BlueStacks Air and enjoy
-- If you need **Zygisk**, enable it from Kitsune Mask settings and reboot BlueStacks Air
+- If you need **Zygisk**, enable it from Magisk settings and reboot BlueStacks Air
 
 ## Unrooting
 

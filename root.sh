@@ -15,10 +15,11 @@ STAGE2_INJECT_BEGIN="# BST-AIR-ROOT:MAGISK_RC_INJECT_BEGIN"
 STAGE2_INJECT_END="# BST-AIR-ROOT:MAGISK_RC_INJECT_END"
 
 abspath() {
-  if  [[ $1 == /* ]]; then
-    echo $1
+  local input="$1"
+  if [[ "$input" == /* ]]; then
+    printf '%s\n' "$input"
   else
-    echo $(pwd)/$1
+    printf '%s\n' "$(pwd)/$input"
   fi
 }
 
@@ -43,14 +44,15 @@ while getopts "h?i:b:o:" opt; do
         echo "Usage: $0 [-i initrd_input_path] [-o initrd_output_path] [-b backup_dir]"
         exit 0
         ;;
-    i)  INITRD_INPUT=$( abspath ${OPTARG} )
+    i)  INITRD_INPUT=$( abspath "$OPTARG" )
         INPLACE=0
+        INITRD_BACKUP="${INITRD_INPUT}.bak"
         ;;
-    o)  INITRD_OUTPUT=$( abspath ${OPTARG} )
+    o)  INITRD_OUTPUT=$( abspath "$OPTARG" )
         mkdir -p "$( dirname "$INITRD_OUTPUT" )"
         INPLACE=0
         ;;
-    b)  BACKUP_DIR=$( abspath ${OPTARG} )
+    b)  BACKUP_DIR=$( abspath "$OPTARG" )
         mkdir -p "$BACKUP_DIR"
         INITRD_BACKUP=$BACKUP_DIR/initrd_hvf.img
         ;;
@@ -81,6 +83,8 @@ require_cmd cat
 require_cmd find
 require_cmd grep
 require_cmd awk
+require_cmd rm
+require_cmd mv
 
 if [ $INPLACE -eq 1 ]; then
   require_cmd defaults
@@ -137,7 +141,7 @@ echo '[*] Patching initrd'
 [[ -d initrd ]] && rm -rf initrd
 mkdir initrd
 cd initrd
-cat "$INITRD_BACKUP" | cpio -id
+gzip -dc "$INITRD_INPUT" | cpio -id
 cp -r "$MAGISK_BIN_DIR" boot/magisk
 chmod 700 boot/magisk/*
 cp "$BASE_DIR/magisk.rc" boot/magisk.rc
@@ -187,7 +191,7 @@ if [ $INPLACE -eq 1 ]; then
   echo ''
   echo 'Next steps:'
   echo '* Install magisk.apk'
-  echo '* Open Kitsune Mask app and proceed with additional setup'
+  echo '* Open Magisk app and proceed with additional setup'
   echo '* Quit BlueStacks'
 else
   echo '[*] Done'
@@ -198,6 +202,6 @@ else
   echo "* Copy $INITRD_OUTPUT to $INITRD_PATH"
   echo '* Open BlueStacks'
   echo '* Install magisk.apk'
-  echo '* Open Kitsune Mask app and proceed with additional setup'
+  echo '* Open Magisk app and proceed with additional setup'
   echo '* Quit BlueStacks'
 fi
