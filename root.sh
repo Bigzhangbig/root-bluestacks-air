@@ -96,6 +96,10 @@ fi
 
 validate_initrd
 
+if [ "$INITRD_BACKUP" != "$INITRD_INPUT" ]; then
+  cp -f "$INITRD_INPUT" "$INITRD_BACKUP" || die "Failed to refresh initrd backup: $INITRD_BACKUP"
+fi
+
 echo '=================================================='
 echo '**                                              **'
 echo '**        BlueStacks Air Magisk Installer       **'
