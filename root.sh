@@ -6,9 +6,12 @@ ARCH=arm64-v8a
 BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 MAGISK_BIN_DIR=$BASE_DIR/magisk-bin
 INITRD_PATH=$BLUESTACKS/Contents/img/initrd_hvf.img
-INITRD_BACKUP=$INITRD_PATH.bak
-INITRD_OUTPUT=$INITRD_PATH
+INITRD_INPUT=$INITRD_PATH
+INITRD_BACKUP=$INITRD_INPUT.bak
+INITRD_OUTPUT=$INITRD_INPUT
 INPLACE=1
+OUTPUT_SET=0
+BACKUP_SET=0
 
 abspath() {
   if  [[ $1 == /* ]]; then
@@ -18,22 +21,35 @@ abspath() {
   fi
 }
 
-while getopts "h?b:o:" opt; do
+while getopts "h?b:o:i:" opt; do
     case "$opt" in
     h|\?)
-        echo "Usage: $0 [-o initrd_output_path] [-b backup_dir]"
+        echo "Usage: $0 [-i initrd_input_path] [-o initrd_output_path] [-b backup_dir]"
         exit 0
         ;;
     o)  INITRD_OUTPUT=$( abspath ${OPTARG} )
         mkdir -p $( dirname $INITRD_OUTPUT )
         INPLACE=0
+        OUTPUT_SET=1
         ;;
     b)  BACKUP_DIR=$( abspath ${OPTARG} )
         mkdir -p $BACKUP_DIR
         INITRD_BACKUP=$BACKUP_DIR/initrd_hvf.img
+        BACKUP_SET=1
+        ;;
+    i)  INITRD_INPUT=$( abspath ${OPTARG} )
+        INPLACE=0
         ;;
     esac
 done
+
+if [ $OUTPUT_SET -eq 0 ]; then
+  INITRD_OUTPUT=$INITRD_INPUT
+fi
+
+if [ $BACKUP_SET -eq 0 ]; then
+  INITRD_BACKUP=$INITRD_INPUT.bak
+fi
 
 if [ -d "$BLUESTACKS" ]; then
   PLIST_FILE=$BLUESTACKS/Contents/Info.plist
@@ -41,7 +57,12 @@ if [ -d "$BLUESTACKS" ]; then
   echo "[*] Found BlueStacks Air version $BS_VERSION"
   echo ''
 else
-  echo "[!] BlueStacks not found"
+  echo "[*] BlueStacks not found, patching provided initrd only"
+  echo ''
+fi
+
+if [ ! -f "$INITRD_INPUT" ]; then
+  echo "[!] initrd input not found: $INITRD_INPUT"
   exit 1
 fi
 
@@ -79,7 +100,7 @@ cp magisk/assets/stub.apk $MAGISK_BIN_DIR/stub.apk
 rm -rf magisk
 
 echo "[*] Backing up initrd to $INITRD_BACKUP"
-[[ ! -f $INITRD_BACKUP ]] && cp $INITRD_PATH $INITRD_BACKUP
+[[ ! -f $INITRD_BACKUP ]] && cp "$INITRD_INPUT" "$INITRD_BACKUP"
 
 [[ ! -d build ]] && mkdir build
 cd build
@@ -88,7 +109,13 @@ echo '[*] Patching initrd'
 [[ -d initrd ]] && rm -rf initrd
 mkdir initrd
 cd initrd
-cat ${INITRD_BACKUP:-INITRD_PATH} | cpio -id
+if gzip -t "$INITRD_BACKUP" >/dev/null 2>&1; then
+  INITRD_COMPRESS=gzip
+  gzip -dc "$INITRD_BACKUP" | cpio -id
+else
+  INITRD_COMPRESS=none
+  cat "$INITRD_BACKUP" | cpio -id
+fi
 cp -r $MAGISK_BIN_DIR boot/magisk
 chmod 700 boot/magisk/*
 cp $BASE_DIR/magisk.rc boot/magisk.rc
@@ -107,7 +134,11 @@ exec /init
 EOF
 
 echo "[*] Repacking initrd to $INITRD_OUTPUT"
-find . | cpio -H newc -o | gzip > $INITRD_OUTPUT
+if [ "$INITRD_COMPRESS" = "gzip" ]; then
+  find . | cpio -H newc -o | gzip > "$INITRD_OUTPUT"
+else
+  find . | cpio -H newc -o > "$INITRD_OUTPUT"
+fi
 
 cd $BASE_DIR
 
