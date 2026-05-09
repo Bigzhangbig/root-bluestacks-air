@@ -19,8 +19,10 @@
 ## Requirements
 
 - [BlueStacks Air](https://www.bluestacks.com/mac)
-- [Kitsune Magisk](https://github.com/1q23lyc45/KitsuneMagisk/releases)  
-  Tested version: v27.2-kitsune-4
+- Magisk app (`magisk.apk`)  
+  You can use official Magisk or Kitsune Mask (tested: Kitsune `v27.2-kitsune-4`)
+
+> Note: This project injects Magisk into `initrd_hvf.img`. KernelSU is not supported by this approach because it requires kernel-side integration.
 
 ## Rooting
 
