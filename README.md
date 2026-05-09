@@ -12,6 +12,7 @@
 - 5.21.730.7536
 - 5.21.735.7518
 - 5.21.745.7536
+- 5.21.755.7538
 
 ![Screenshot](/images/bluestacks-air-root-magisk.png)
 
@@ -43,6 +44,12 @@
   ```
 
   the above command will backup the original `initrd_hvf.img` in `files/backup` and create a patched one in `files/initrd_hvf.img`, you may specify a different path for the output and backup directory
+- If your `initrd_hvf.img` is already in the project folder, you can specify it as input using `-i`
+
+  ```bash
+  bash root.sh -i initrd_hvf.img -o files/initrd_hvf.img -b files/backup
+  ```
+
 - Copy the patched `initrd_hvf.img` to `/Applications/BlueStacks.app/Contents/img/` and replace the original one
 - Start BlueStacks Air
 - Continue with [Next Steps](#next-steps)

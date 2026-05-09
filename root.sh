@@ -6,6 +6,7 @@ ARCH=arm64-v8a
 BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 MAGISK_BIN_DIR=$BASE_DIR/magisk-bin
 INITRD_PATH=$BLUESTACKS/Contents/img/initrd_hvf.img
+INITRD_INPUT=$INITRD_PATH
 INITRD_BACKUP=$INITRD_PATH.bak
 INITRD_OUTPUT=$INITRD_PATH
 INPLACE=1
@@ -18,18 +19,21 @@ abspath() {
   fi
 }
 
-while getopts "h?b:o:" opt; do
+while getopts "h?i:b:o:" opt; do
     case "$opt" in
     h|\?)
-        echo "Usage: $0 [-o initrd_output_path] [-b backup_dir]"
+        echo "Usage: $0 [-i initrd_input_path] [-o initrd_output_path] [-b backup_dir]"
         exit 0
         ;;
+    i)  INITRD_INPUT=$( abspath ${OPTARG} )
+        INPLACE=0
+        ;;
     o)  INITRD_OUTPUT=$( abspath ${OPTARG} )
-        mkdir -p $( dirname $INITRD_OUTPUT )
+        mkdir -p "$( dirname "$INITRD_OUTPUT" )"
         INPLACE=0
         ;;
     b)  BACKUP_DIR=$( abspath ${OPTARG} )
-        mkdir -p $BACKUP_DIR
+        mkdir -p "$BACKUP_DIR"
         INITRD_BACKUP=$BACKUP_DIR/initrd_hvf.img
         ;;
     esac
@@ -41,8 +45,10 @@ if [ -d "$BLUESTACKS" ]; then
   echo "[*] Found BlueStacks Air version $BS_VERSION"
   echo ''
 else
-  echo "[!] BlueStacks not found"
-  exit 1
+  if [ $INPLACE -eq 1 ]; then
+    echo "[!] BlueStacks not found"
+    exit 1
+  fi
 fi
 
 echo '=================================================='
@@ -67,19 +73,19 @@ echo '[*] Preparing magisk'
 unzip -oq magisk.apk -d magisk
 
 [[ -d $MAGISK_BIN_DIR ]] && rm -rf $MAGISK_BIN_DIR
-mkdir $MAGISK_BIN_DIR
+mkdir "$MAGISK_BIN_DIR"
 
 BIN_NAMES=("magisk64" "magiskinit" "magiskpolicy")
 for BIN_NAME in ${BIN_NAMES[@]}; do
   SRC=magisk/lib/$ARCH/lib$BIN_NAME.so
-  [[ -f $SRC ]] && cp $SRC $MAGISK_BIN_DIR/$BIN_NAME
+  [[ -f $SRC ]] && cp "$SRC" "$MAGISK_BIN_DIR/$BIN_NAME"
 done
-cp magisk/assets/stub.apk $MAGISK_BIN_DIR/stub.apk
+cp magisk/assets/stub.apk "$MAGISK_BIN_DIR/stub.apk"
 
 rm -rf magisk
 
 echo "[*] Backing up initrd to $INITRD_BACKUP"
-[[ ! -f $INITRD_BACKUP ]] && cp $INITRD_PATH $INITRD_BACKUP
+[[ ! -f "$INITRD_BACKUP" ]] && cp "$INITRD_INPUT" "$INITRD_BACKUP"
 
 [[ ! -d build ]] && mkdir build
 cd build
@@ -88,10 +94,10 @@ echo '[*] Patching initrd'
 [[ -d initrd ]] && rm -rf initrd
 mkdir initrd
 cd initrd
-cat ${INITRD_BACKUP:-INITRD_PATH} | cpio -id
-cp -r $MAGISK_BIN_DIR boot/magisk
+cat "$INITRD_BACKUP" | cpio -id
+cp -r "$MAGISK_BIN_DIR" boot/magisk
 chmod 700 boot/magisk/*
-cp $BASE_DIR/magisk.rc boot/magisk.rc
+cp "$BASE_DIR/magisk.rc" boot/magisk.rc
 if [ -f $MAGISK_BIN_DIR/magisk32 ]; then
   sed -i '' -e 's/magisk64/magisk32/g' boot/magisk.rc
 fi
