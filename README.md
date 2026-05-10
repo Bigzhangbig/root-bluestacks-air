@@ -1,90 +1,113 @@
-# Root BlueStacks Air macOS
+# BlueStacks Air Root (Kitsune Mask)
 
-## Tested on BlueStacks Air
+在 Apple Silicon Mac 的 BlueStacks Air 上获取 Root 权限，使用 Magisk (Kitsune Mask)。
 
-- 5.21.680.7532
-- 5.21.695.7506
-- 5.21.700.7523
-- 5.21.705.7515
-- 5.21.712.7503
-- 5.21.715.7538
-- 5.21.720.7530
-- 5.21.730.7536
-- 5.21.735.7518
-- 5.21.745.7536
+原始仓库：[hanreev/root-bluestacks-air](https://github.com/hanreev/root-bluestacks-air)
 
-![Screenshot](/images/bluestacks-air-root-magisk.png)
+## 测试环境
 
-## Requirements
+- **设备**: MacBook M3 (Apple Silicon)
+- **BlueStacks Air 版本**: 5.21.755.7538
+- **Magisk 版本**: [Kitsune Mask v27.2-kitsune-4](https://github.com/1q23lyc45/KitsuneMagisk)
 
-- [BlueStacks Air](https://www.bluestacks.com/mac)
-- [Kitsune Magisk](https://github.com/1q23lyc45/KitsuneMagisk/releases)  
-  Tested version: v27.2-kitsune-4
+> BlueStacks 5.21.720 以下版本同样适用。旧版 Magisk (v26.x) 不支持 `--setup-sbin` 参数，请勿使用。
 
-## Rooting
+## 快速开始
 
-- Install BlueStacks Air
-- ‼️ **REQUIRED** ‼️ Open BlueStacks Air for the first time
-- Close BlueStacks Air
-- Download this repo and extract it
-- Copy the downloaded Kitsune Mask apk to the project folder, and rename it to `magisk.apk`
-- Open **Terminal.app** or **iTerm.app** and navigate to the project folder
+### 方式一：预构建 initrd（推荐）
 
-  ```bash
-  cd ~/Downloads/root-bluestacks-air
-  ```
+仓库 `release/` 目录已提供 patch 好的 initrd，直接替换即可：
 
-### Method 1: SIP enabled
+```bash
+# 1. 备份原 initrd
+sudo cp /Applications/BlueStacks.app/Contents/img/initrd_hvf.img \
+        /Applications/BlueStacks.app/Contents/img/initrd_hvf.img.bak
 
-- Execute `root.sh` specifying initrd output path and backup directory
+# 2. 替换为 patch 好的 initrd
+sudo cp release/initrd_patched.img \
+        /Applications/BlueStacks.app/Contents/img/initrd_hvf.img
 
-  ```bash
-  bash root.sh -o files/initrd_hvf.img -b files/backup
-  ```
+# 3. 启动 BlueStacks，安装完整版 APK
+hd-adb install -r kitsune_v272.apk
+```
 
-  the above command will backup the original `initrd_hvf.img` in `files/backup` and create a patched one in `files/initrd_hvf.img`, you may specify a different path for the output and backup directory
-- Copy the patched `initrd_hvf.img` to `/Applications/BlueStacks.app/Contents/img/` and replace the original one
-- Start BlueStacks Air
-- Continue with [Next Steps](#next-steps)
+打开 Kitsune Mask，如提示"需要修复运行环境"，点击**确定**，应用自动完成安装并重启。
 
-### Method 2: SIP disabled
+### 方式二：运行脚本自动 patch
 
-- Execute `root.sh` with sudo
+```bash
+# 确保 magisk.apk 指向正确版本
+ln -sf kitsune_v272.apk magisk.apk
 
-  ```bash
-  sudo bash root.sh
-  ```
+# 执行安装脚本
+./root.sh
+```
 
-- Wait until BlueStacks Air starts
-- Continue with [Next Steps](#next-steps)
+脚本会自动关闭 BlueStacks、提取 Magisk 二进制、注入 initrd、重新启动。
 
-### Next Steps
+## 验证 Root
 
-- Install Kitsune Mask (`magisk.apk`)
-- Open Kitsune Mask and press **OK** when the **Requires Additional Setup** prompt appears. This will reboot BlueStacks Air.
-  ![magisk-additional-setup](/images/magisk-additional-setup.png)
-- Force quit BlueStacks Air if necessary
-- Open BlueStacks Air and enjoy
-- If you need **Zygisk**, enable it from Kitsune Mask settings and reboot BlueStacks Air
+```bash
+# 检查 root 权限
+hd-adb shell "su -c id"
+# uid=0(root) gid=0(root) groups=0(root)
 
-## Unrooting
+# 检查 Magisk daemon 进程
+hd-adb shell "ps -A | grep magisk"
+# root  xxx  1  ...  S magiskd
+```
 
-### Method 1: SIP enabled
+## 仓库文件说明
 
-- Copy the backup `initrd_hvf.img` to `/Applications/BlueStacks.app/Contents/img/`
-- Done
+| 文件 | 说明 |
+|------|------|
+| `root.sh` | 主安装脚本，自动 patch initrd |
+| `magisk.rc` | init 阶段 Magisk 启动配置 |
+| `initrd_hvf.img` | 原始未修改 initrd（干净备份） |
+| `initrd_patched.img` | 已注入 Magisk 的 initrd（手动生成） |
+| `release/initrd_patched.img` | 预构建的 patch 后 initrd |
+| `release/magisk-binaries/` | 从 APK 提取的 Magisk 二进制文件 |
+| `kitsune_v272.apk` | 测试通过的完整版 Magisk |
+| `README_fix.md` | 完整的问题排查和修复记录 |
+| `archive/` | 历史失败尝试和旧版本文件 |
 
-### Method 2: SIP disabled
+## 核心原理
 
-- Make sure BlueStacks Air is closed
-- Execute `unroot.sh` with sudo
+BlueStacks Air 使用两阶段启动：
 
-  ```bash
-  sudo bash unroot.sh
-  ```
+```
+initrd → boot/init → boot/stage2.sh → Android init
+```
 
-- Done
+脚本在 `stage2.sh` 的 `exec /init` 之前注入代码，将 `magisk.rc` 追加到 `/init.bst.rc`，使 Android init 在后续阶段自动启动 Magisk daemon。
 
-### Buy me a coffee
+`magisk64 --setup-sbin` 负责创建 `/sbin` 目录并建立符号链接，后续所有 Magisk 服务通过 `/sbin/magisk` 调用。
 
-[![](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://paypal.me/hanreev)
+## 常见问题
+
+### initrd 已被污染
+
+如果之前多次尝试失败导致 initrd 混乱，先用仓库自带的干净 `initrd_hvf.img` 恢复：
+
+```bash
+sudo cp initrd_hvf.img /Applications/BlueStacks.app/Contents/img/initrd_hvf.img
+```
+
+然后重新替换为 `release/initrd_patched.img` 或运行 `./root.sh`。
+
+### Magisk 打开后提示下载完整版
+
+说明你安装的是 **stub 版本**。卸载后重新安装 `kitsune_v272.apk`。
+
+**识别方法**：`设置 → 关于` 中 versionName=1.0 的就是 stub。
+
+### Kitsune 仓库已删
+
+原始 Kitsune Mask 仓库已被删除，可用镜像：[1q23lyc45/KitsuneMagisk](https://github.com/1q23lyc45/KitsuneMagisk)
+
+## 注意事项
+
+- **不要修改 `root.sh` 或 `magisk.rc`**：原始仓库的配置已足够，本地添加的 `mount -o remount,rw /` 等修改反而引入问题
+- **rootfs 在 stage2.sh 阶段可写**：不需要 remount，直接 `cat >> /init.bst.rc` 即可
+- **必须完整版 APK**：stub 版无法完成环境修复
+- **必须 v27.2-kitsune-4**：旧版二进制不支持 `--setup-sbin` 参数格式
