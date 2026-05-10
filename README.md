@@ -8,9 +8,10 @@
 
 - **设备**: MacBook M3 (Apple Silicon)
 - **BlueStacks Air 版本**: 5.21.755.7538
-- **Magisk 版本**: [Kitsune Mask v27.2-kitsune-4](https://github.com/1q23lyc45/KitsuneMagisk)
+- **Magisk 版本**: [Kitsune Mask v27.2-kitsune-4](https://github.com/Bigzhangbig/root-bluestacks-air/releases/tag/v27.2-kitsune-4)
 
 > BlueStacks 5.21.720 以下版本同样适用。旧版 Magisk (v26.x) 不支持 `--setup-sbin` 参数，请勿使用。
+> 原始仓库及镜像已删除，APK 从本地备份上传至本仓库 Release。
 
 ## 快速开始
 
@@ -103,7 +104,7 @@ sudo cp initrd_hvf.img /Applications/BlueStacks.app/Contents/img/initrd_hvf.img
 
 ### Kitsune 仓库已删
 
-原始 Kitsune Mask 仓库已被删除，可用镜像：[1q23lyc45/KitsuneMagisk](https://github.com/1q23lyc45/KitsuneMagisk)
+原始 Kitsune Mask 仓库及镜像均已删除。本仓库 [Release 页面](https://github.com/Bigzhangbig/root-bluestacks-air/releases/tag/v27.2-kitsune-4) 提供已验证的 APK 下载。
 
 ## 注意事项
 
