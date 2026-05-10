@@ -1,0 +1,49 @@
+# 方案 D: 修改 Magisk 源码去掉 early exit
+# ========================================
+#
+# 你需要从 Kitsune Mask 源码编译。使用 scorpion-2/KitsuneMag 或 NanashiTheNameless/Magisk-Kitsune 的源码。
+#
+# 1. 克隆源码
+#    git clone --recurse-submodules https://github.com/scorpion-2/KitsuneMag.git
+#    cd KitsuneMag
+#
+# 2. 修改 native/src/core/daemon.cpp (或类似文件)
+#    找到 daemon_entry() 函数，在开头去掉环境检测：
+#
+#    --- 原代码 ---
+#    int daemon_entry(int argc, char **argv) {
+#        // 环境检测，任一失败 exit(1)
+#        if (access("/dev/null", F_OK) != 0) return 1;
+#        if (access("/dev/urandom", F_OK) != 0) return 1;
+#        ...
+#    }
+#
+#    --- 修改后 ---
+#    int daemon_entry(int argc, char **argv) {
+#        // BlueStacks Air 环境跳过严格检测
+#        // if (access("/dev/null", F_OK) != 0) return 1;
+#        // if (access("/dev/urandom", F_OK) != 0) return 1;
+#        ...
+#    }
+#
+# 3. 修改 native/src/init/init.cpp
+#    找到处理 -X 参数的地方，跳过可能导致 0.000000 秒退出的检查：
+#
+#    --- 原代码 (大概位置) ---
+#    if (argc > 1 && argv[1] == "-X"sv) {
+#        // 某些初始化检查
+#        return daemon_entry(argc, argv);
+#    }
+#
+#    如果 daemon_entry 里的检测被注释掉，-X 就能继续执行。
+#
+# 4. 构建
+#    安装 Android NDK r25+ 和 Rust 工具链后：
+#    python build.py all
+#
+# 5. 提取编译产物
+#    在 out/ 或 app/build/ 目录下找到 magisk64，替换 initrd 中的 /boot/magisk/magisk64
+#
+# ========================================
+# 注意: 这只是粗略指导。具体文件和行号因版本而异。
+#      建议先 grep 搜索 "daemon_entry" 和 "exit(1)" 定位实际代码。

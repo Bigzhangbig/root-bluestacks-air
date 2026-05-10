@@ -1,0 +1,10 @@
+on post-fs-data
+    start logd
+    exec u:r:su:s0 root root -- /boot/magisk/magiskpolicy --live --magisk
+    exec u:r:magisk:s0 root root -- /boot/magisk/magiskpolicy --live --magisk
+    exec u:r:update_engine:s0 root root -- /boot/magisk/magiskpolicy --live --magisk
+    exec u:r:su:s0 root root -- /boot/magisk/magisk64 -X
+    exec u:r:su:s0 root root -- /sbin/magisk --auto-selinux --post-fs-data
+
+on property:sys.boot_completed=1
+    exec u:r:su:s0 root root -- /sbin/magisk --auto-selinux --boot-complete

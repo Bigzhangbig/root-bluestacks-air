@@ -1,0 +1,22 @@
+#
+# By Chih-Wei Huang <cwhuang@linux.org.tw>
+# Last updated 2012/02/08
+#
+# License: GNU Public License
+# We explicitely grant the right to use the scripts
+# with Android-x86 project.
+#
+
+VENDOR_PROP_FILE="/data/.vendor.prop"
+
+setup_dpi()
+{
+	if [ -n "$BST_DPI" ]; then
+        VENDOR_OLD_DPI=`grep "ro\.sf\.lcd_density" $VENDOR_PROP_FILE | cut -d '=' -f 2`
+        if [ $VENDOR_OLD_DPI -ne $BST_DPI ]; then
+            if [ -f $VENDOR_PROP_FILE ]; then
+	            sed -i "s/ro.sf.lcd_density=[0-9]*/ro.sf.lcd_density=$BST_DPI/" $VENDOR_PROP_FILE
+            fi
+        fi
+    fi
+}

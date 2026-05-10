@@ -1,0 +1,30 @@
+# 方案 C: 尝试不同启动参数组合
+# 原理: -X 可能不被识别或环境检测失败，尝试多种参数
+
+on post-fs-data
+    start logd
+    # magiskpolicy
+    exec u:r:su:s0 root root -- /boot/magisk/magiskpolicy --live --magisk
+    exec u:r:magisk:s0 root root -- /boot/magisk/magiskpolicy --live --magisk
+    exec u:r:update_engine:s0 root root -- /boot/magisk/magiskpolicy --live --magisk
+    # 尝试 1: 直接用 daemon 模式 (不 -X)
+    exec u:r:su:s0 root root -- /boot/magisk/magisk64 --daemon
+    # 尝试 2: 如果 daemon 失败，尝试 preinit 模式
+    # exec u:r:su:s0 root root -- /boot/magisk/magisk64 --preinit-device
+    exec u:r:su:s0 root root -- /sbin/magisk --auto-selinux --post-fs-data
+
+on nonencrypted
+    exec u:r:su:s0 root root -- /sbin/magisk --auto-selinux --service
+
+on property:vold.decrypt=trigger_restart_framework
+    exec u:r:su:s0 root root -- /sbin/magisk --auto-selinux --service
+
+on property:sys.boot_completed=1
+    mkdir /data/adb/magisk 755
+    exec u:r:su:s0 root root -- /sbin/magisk --auto-selinux --boot-complete
+
+on property:init.svc.zygote=restarting
+    exec u:r:su:s0 root root -- /sbin/magisk --auto-selinux --zygote-restart
+
+on property:init.svc.zygote=stopped
+    exec u:r:su:s0 root root -- /sbin/magisk --auto-selinux --zygote-restart

@@ -1,0 +1,36 @@
+# 方案 F: remount rw (stage2.sh) + 手动创建 /sbin/magisk + exec_background daemon
+# 结合所有已知修复
+
+on post-fs-data
+    start logd
+    exec u:r:su:s0 root root -- /boot/magisk/magiskpolicy --live --magisk
+    exec u:r:magisk:s0 root root -- /boot/magisk/magiskpolicy --live --magisk
+    exec u:r:update_engine:s0 root root -- /boot/magisk/magiskpolicy --live --magisk
+    # /sbin 现在应该可写了（stage2.sh 已 remount）
+    exec u:r:su:s0 root root -- /system/bin/mkdir -p /sbin
+    exec u:r:su:s0 root root -- /system/bin/ln -sf /boot/magisk/magisk64 /sbin/magisk
+    exec u:r:su:s0 root root -- /system/bin/ln -sf /boot/magisk/magiskpolicy /sbin/magiskpolicy
+    # 预创建 daemon 工作目录
+    exec u:r:su:s0 root root -- /system/bin/mkdir -p /dev/.magisk
+    # exec_background 启动 daemon
+    exec_background u:r:su:s0 root root -- /sbin/magisk --daemon
+    # 等待 daemon 初始化
+    exec u:r:su:s0 root root -- /system/bin/sleep 2
+    # 后续服务
+    exec u:r:su:s0 root root -- /sbin/magisk --auto-selinux --post-fs-data
+
+on nonencrypted
+    exec u:r:su:s0 root root -- /sbin/magisk --auto-selinux --service
+
+on property:vold.decrypt=trigger_restart_framework
+    exec u:r:su:s0 root root -- /sbin/magisk --auto-selinux --service
+
+on property:sys.boot_completed=1
+    mkdir /data/adb/magisk 755
+    exec u:r:su:s0 root root -- /sbin/magisk --auto-selinux --boot-complete
+
+on property:init.svc.zygote=restarting
+    exec u:r:su:s0 root root -- /sbin/magisk --auto-selinux --zygote-restart
+
+on property:init.svc.zygote=stopped
+    exec u:r:su:s0 root root -- /sbin/magisk --auto-selinux --zygote-restart
