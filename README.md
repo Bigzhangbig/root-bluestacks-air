@@ -58,6 +58,10 @@ hd-adb shell "ps -A | grep magisk"
 # root  xxx  1  ...  S magiskd
 ```
 
+成功安装后，Kitsune Mask 主页显示如下：
+
+![Kitsune Mask 主页](images/bluestacks-air-kitsune-home.png)
+
 ## 仓库文件说明
 
 | 文件 | 说明 |
